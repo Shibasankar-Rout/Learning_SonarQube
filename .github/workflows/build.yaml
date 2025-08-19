@@ -1,0 +1,33 @@
+name: Build
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    services:
+      sonarqube:
+        image: sonarqube:lts-community
+        ports:
+          - 9000:9000
+    steps:
+      - uses: actions/checkout@v3
+      - name: Wait for SonarQube
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:9000/api/system/status | grep -q '"UP"'; then
+              echo "SonarQube is UP"
+              break
+            fi
+            echo "Waiting..."
+            sleep 10
+          done
+      - name: Run Sonar Scanner
+        run: sonar-scanner \
+          -Dsonar.projectKey=security-app \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=http://localhost:9000 \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
